@@ -1,0 +1,69 @@
+<Project>
+
+  <!--
+    Both projects compile against the Mapping Tools assemblies. Compile against the copy the user
+    actually runs, which means the installed one. MappingToolsRoot can be passed on the command
+    line for an install in a location this list does not cover.
+  -->
+  <PropertyGroup>
+    <MappingToolsRoot Condition="'$(MappingToolsRoot)' == '' and Exists('$(LOCALAPPDATA)\MappingTools\current\Mapping_Tools.Desktop.dll')">$(LOCALAPPDATA)\MappingTools\current</MappingToolsRoot>
+    <MappingToolsRoot Condition="'$(MappingToolsRoot)' == '' and Exists('$(LOCALAPPDATA)\Programs\Mapping Tools\Mapping_Tools.Desktop.dll')">$(LOCALAPPDATA)\Programs\Mapping Tools</MappingToolsRoot>
+    <MappingToolsRoot Condition="'$(MappingToolsRoot)' == '' and Exists('$(ProgramFiles)\Mapping Tools\Mapping_Tools.Desktop.dll')">$(ProgramFiles)\Mapping Tools</MappingToolsRoot>
+    <MappingToolsRoot Condition="'$(MappingToolsRoot)' == '' and Exists('$(ProgramFiles(x86))\Mapping Tools\Mapping_Tools.Desktop.dll')">$(ProgramFiles(x86))\Mapping Tools</MappingToolsRoot>
+
+    <!-- Mapping Tools has these assemblies loaded when it loads the plugin. Anything that runs
+         without the host needs its own copy, so it sets this to true. -->
+    <MappingToolsCopyLocal Condition="'$(MappingToolsCopyLocal)' == ''">false</MappingToolsCopyLocal>
+  </PropertyGroup>
+
+  <!--
+    The versions the installed Mapping Tools ships. The plugin compiles against these and binds to
+    them at run time, so they are the host's versions rather than whatever is newest.
+  -->
+  <PropertyGroup>
+    <AvaloniaVersion>12.1.0</AvaloniaVersion>
+    <MaterialAvaloniaVersion>3.17.0</MaterialAvaloniaVersion>
+    <CommunityToolkitMvvmVersion>8.4.2</CommunityToolkitMvvmVersion>
+    <DependencyInjectionVersion>10.0.0</DependencyInjectionVersion>
+  </PropertyGroup>
+
+  <Target Name="RequireMappingTools" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="'$(MappingToolsRoot)' == ''"
+           Code="MT0001"
+           Text="Mapping Tools is not installed in any of the usual places. Install it, or point this build at it with -p:MappingToolsRoot=&quot;&lt;folder holding Mapping_Tools.Desktop.dll&gt;&quot;." />
+    <Error Condition="!Exists('$(MappingToolsRoot)\Mapping_Tools.Desktop.dll')"
+           Code="MT0002"
+           Text="No Mapping_Tools.Desktop.dll under '$(MappingToolsRoot)'. Point MappingToolsRoot at the folder that holds it, which is the Mapping Tools install folder." />
+
+    <GetAssemblyIdentity AssemblyFiles="$(MappingToolsRoot)\Mapping_Tools.Desktop.dll">
+      <Output TaskParameter="Assemblies" ItemName="MappingToolsIdentity" />
+    </GetAssemblyIdentity>
+
+    <!-- The major number on its own, because MSBuild compares two numeric strings as numbers. -->
+    <PropertyGroup>
+      <MappingToolsVersion>@(MappingToolsIdentity->'%(Version)')</MappingToolsVersion>
+      <MappingToolsMajor>$([System.Version]::Parse('$(MappingToolsVersion)').Major)</MappingToolsMajor>
+    </PropertyGroup>
+
+    <Error Condition="'$(MappingToolsMajor)' != '' and '$(MappingToolsMajor)' &lt; 2"
+           Code="MT0003"
+           Text="Mapping Tools 2.0.0 or newer is required. The install at '$(MappingToolsRoot)' is version $(MappingToolsVersion)." />
+  </Target>
+
+  <ItemGroup>
+    <!-- Private decides whether the assembly is copied next to what is being built. -->
+    <Reference Include="Mapping_Tools.Core" Condition="'$(MappingToolsRoot)' != ''">
+      <HintPath>$(MappingToolsRoot)\Mapping_Tools.Core.dll</HintPath>
+      <Private>$(MappingToolsCopyLocal)</Private>
+    </Reference>
+    <Reference Include="Mapping_Tools.Application" Condition="'$(MappingToolsRoot)' != ''">
+      <HintPath>$(MappingToolsRoot)\Mapping_Tools.Application.dll</HintPath>
+      <Private>$(MappingToolsCopyLocal)</Private>
+    </Reference>
+    <Reference Include="Mapping_Tools.Desktop" Condition="'$(MappingToolsRoot)' != ''">
+      <HintPath>$(MappingToolsRoot)\Mapping_Tools.Desktop.dll</HintPath>
+      <Private>$(MappingToolsCopyLocal)</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

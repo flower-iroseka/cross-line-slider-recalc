@@ -1,0 +1,197 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:CrossLineSliderRecalc"
+             xmlns:controls="using:Mapping_Tools.Desktop.Controls"
+             xmlns:materialAssists="clr-namespace:Material.Styles.Assists;assembly=Material.Styles"
+             xmlns:ripple="clr-namespace:Material.Ripple;assembly=Material.Ripple"
+             x:Class="CrossLineSliderRecalc.CrossLineSliderToolView"
+             x:DataType="vm:CrossLineSliderToolViewModel">
+    <UserControl.Resources>
+        <!-- One divider is picked out of a row, so it is a small chip rather than a radio circle:
+             as wide as its text and nothing more. The checked one is painted the way Mapping Tools
+             paints a primary action - the run button in the corner uses the same pair - so it is the
+             theme's blue with the light foreground the theme pairs it with, raised the way the run
+             button is. Pressing one shows Material's own ripple, the same one every other button in
+             this window shows. -->
+        <ControlTheme x:Key="DivisionChipTheme" TargetType="RadioButton">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MaterialTextBoxBorderBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource MaterialBodyBrush}" />
+            <Setter Property="Padding" Value="9,3" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="PART_Chip"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="4">
+                        <Border.Transitions>
+                            <Transitions>
+                                <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.18" />
+                            </Transitions>
+                        </Border.Transitions>
+                        <Panel>
+                            <!-- The wash marks whatever the pointer is over. On the dark theme
+                                 the body colour is near white, which reads as a highlight; on the
+                                 light theme it is grey, which is what shows up there. The checked
+                                 chip uses plain white instead, because over the blue that is what
+                                 makes it paler. -->
+                            <Border Name="PART_ChipWash"
+                                    Background="{DynamicResource MaterialBodyBrush}"
+                                    Opacity="0">
+                                <Border.Transitions>
+                                    <Transitions>
+                                        <DoubleTransition Property="Opacity" Duration="0:0:0.18" />
+                                    </Transitions>
+                                </Border.Transitions>
+                            </Border>
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                              Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              TextBlock.Foreground="{TemplateBinding Foreground}" />
+
+                            <!-- Material's ripple. It hooks up its own pointer events in its
+                                 constructor and paints through a composition child visual, so it
+                                 only has to be here, last, filling the chip: it catches the press
+                                 itself while the radio button under it still gets the click. It
+                                 grows a circle from where the pointer went down and fades that out
+                                 on release.
+
+                                 Nothing is set on it, because its defaults are the ones every other
+                                 button in this window uses: white at 0.6, gone 0.45s after release,
+                                 grown over 1.2s on a circular ease-out. -->
+                            <ripple:RippleEffect Name="PART_ChipRipple" />
+                        </Panel>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+
+            <!-- Resting state, so the shadow transition has somewhere to interpolate from. -->
+            <Style Selector="^ /template/ Border#PART_Chip">
+                <Setter Property="BoxShadow" Value="0 0 0 0 #00000000" />
+            </Style>
+            <Style Selector="^:checked /template/ Border#PART_Chip">
+                <Setter Property="BoxShadow" Value="0 1 3 0 #59000000" />
+            </Style>
+            <Style Selector="^:pointerover /template/ Border#PART_Chip">
+                <Setter Property="BoxShadow" Value="0 1 3 0 #59000000" />
+            </Style>
+            <Style Selector="^:pointerover /template/ Border#PART_ChipWash">
+                <Setter Property="Opacity" Value="0.16" />
+            </Style>
+
+            <Style Selector="^:checked">
+                <Setter Property="Background" Value="{DynamicResource MaterialPrimaryMidBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource MaterialPrimaryMidBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource MaterialDarkForegroundBrush}" />
+            </Style>
+            <Style Selector="^:checked /template/ Border#PART_ChipWash">
+                <Setter Property="Background" Value="White" />
+            </Style>
+            <Style Selector="^:disabled">
+                <Setter Property="Opacity" Value="0.5" />
+            </Style>
+        </ControlTheme>
+    </UserControl.Resources>
+
+    <Grid RowDefinitions="*,Auto">
+        <Grid Margin="0,0,0,10" RowDefinitions="Auto,*">
+
+            <controls:ToolViewHeader
+                Title="Cross-line slider recalc"
+                IsQuickRunSupported="True"
+                HelpText="Moves the tail of the slider selected in the osu! editor onto a grid line, or to a manually entered time. Only the slider's length changes.&#10;&#10;Grid lines stop at the next redline. The slider's duration comes from the redline at its head, even when the slider crosses a later one." />
+
+            <ScrollViewer Grid.Row="1"
+                          Margin="0,10,0,0"
+                          HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="0,0,20,0">
+
+                    <TextBlock FontSize="20" FontWeight="Bold" Text="Alignment" />
+
+                    <ComboBox Width="420"
+                              Margin="0,12,0,0"
+                              HorizontalAlignment="Left"
+                              Cursor="Hand"
+                              materialAssists:TextFieldAssist.Label="Alignment mode"
+                              AutomationProperties.AutomationId="AlignmentModeBox"
+                              SelectedIndex="{Binding AlignmentModeIndex, Mode=TwoWay}"
+                              ToolTip.Tip="Whether the tail goes to a grid line or to a manually entered time.">
+                        <ComboBoxItem Content="Nearest 1/n grid line" />
+                        <ComboBoxItem Content="Custom end time" />
+                    </ComboBox>
+
+                    <StackPanel Margin="0,15,0,0"
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                IsEnabled="{Binding IsGridMode}"
+                                ToolTip.Tip="Which grid the tail snaps to.">
+                        <RadioButton Theme="{StaticResource DivisionChipTheme}"
+                                     GroupName="Division"
+                                     Content="1/1"
+                                     AutomationProperties.AutomationId="Division1Button"
+                                     IsChecked="{Binding IsDivision1, Mode=TwoWay}" />
+                        <RadioButton Theme="{StaticResource DivisionChipTheme}"
+                                     GroupName="Division"
+                                     Content="1/2"
+                                     AutomationProperties.AutomationId="Division2Button"
+                                     IsChecked="{Binding IsDivision2, Mode=TwoWay}" />
+                        <RadioButton Theme="{StaticResource DivisionChipTheme}"
+                                     GroupName="Division"
+                                     Content="1/4"
+                                     AutomationProperties.AutomationId="Division4Button"
+                                     IsChecked="{Binding IsDivision4, Mode=TwoWay}" />
+                        <RadioButton Theme="{StaticResource DivisionChipTheme}"
+                                     GroupName="Division"
+                                     Content="custom"
+                                     AutomationProperties.AutomationId="DivisionCustomButton"
+                                     IsChecked="{Binding IsDivisionCustom, Mode=TwoWay}" />
+                    </StackPanel>
+
+                    <TextBox Margin="0,15,0,0"
+                             materialAssists:TextFieldAssist.Label="n"
+                             AutomationProperties.AutomationId="DivisionsBox"
+                             IsEnabled="{Binding IsCustomDivisionMode}"
+                             Text="{Binding CustomDivisionsText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             ToolTip.Tip="{Binding DivisionsHint}" />
+
+                    <TextBlock Margin="0,8,0,0"
+                               Foreground="Orange"
+                               TextWrapping="Wrap"
+                               Text="{Binding FormHint}" />
+
+                    <TextBox Margin="0,15,0,0"
+                             materialAssists:TextFieldAssist.Label="Target time"
+                             AutomationProperties.AutomationId="TargetTimeBox"
+                             IsEnabled="{Binding IsCustomMode}"
+                             Text="{Binding CustomTimeText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                             ToolTip.Tip="Milliseconds, or an mm:ss:mmm timestamp copied out of the osu! editor." />
+
+                    <Button Margin="0,20,0,0"
+                            HorizontalAlignment="Left"
+                            AutomationProperties.AutomationId="RecalculateButton"
+                            Command="{Binding RunCommand}"
+                            Content="Recalculate"
+                            IsEnabled="{Binding CanPressRun}"
+                            ToolTip.Tip="Moves the selected slider's tail and saves the beatmap." />
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,*">
+            <TextBlock VerticalAlignment="Bottom"
+                       FontWeight="Bold"
+                       Opacity="0.58"
+                       Text="Cross-line slider recalc" />
+            <controls:ToolProgressBar Grid.Column="1"
+                                      Height="20"
+                                      Margin="20,0"
+                                      Maximum="100"
+                                      Value="{Binding Progress}" />
+        </Grid>
+    </Grid>
+</UserControl>

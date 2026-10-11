@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>CrossLineSliderRecalc</RootNamespace>
+    <AssemblyName>CrossLineSliderRecalc</AssemblyName>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <UsedAvaloniaProducts></UsedAvaloniaProducts>
+    <!-- The host supplies the framework assemblies at runtime, so only the plugin is packaged. -->
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <PluginArtifactDirectory>$(MSBuildProjectDirectory)\bin\$(Configuration)\plugin</PluginArtifactDirectory>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      Runtime assets are excluded because Mapping Tools already has all of these loaded and the
+      plugin is delivered as one DLL. Material supplies Material.Styles and Material.Ripple, which
+      the view's XAML names. DependencyInjection is needed for the service collection the
+      registration is handed, which a reference to the host's DLLs does not bring along.
+    -->
+    <PackageReference Include="Avalonia" Version="$(AvaloniaVersion)" ExcludeAssets="runtime" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="$(CommunityToolkitMvvmVersion)" ExcludeAssets="runtime" />
+    <PackageReference Include="Material.Avalonia" Version="$(MaterialAvaloniaVersion)" ExcludeAssets="runtime" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(DependencyInjectionVersion)" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <Target Name="PackagePlugin" AfterTargets="Build">
+    <MakeDir Directories="$(PluginArtifactDirectory)" />
+    <Copy SourceFiles="$(TargetPath)"
+          DestinationFiles="$(PluginArtifactDirectory)\$(TargetFileName)" />
+  </Target>
+
+  <!-- Copies the plugin into the host's Plugins folder. Only runs when DeployToHost is set, so a
+       plain build writes nothing outside this repository. -->
+  <Target Name="DeployPlugin" AfterTargets="PackagePlugin" Condition="'$(DeployToHost)' == 'true'">
+    <PropertyGroup>
+      <HostPluginDirectory>$(APPDATA)\Mapping Tools\Plugins</HostPluginDirectory>
+    </PropertyGroup>
+    <MakeDir Directories="$(HostPluginDirectory)" />
+    <Copy SourceFiles="$(PluginArtifactDirectory)\$(TargetFileName)"
+          DestinationFolder="$(HostPluginDirectory)"
+          SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="Plugin deployed to $(HostPluginDirectory)" />
+  </Target>
+
+</Project>
